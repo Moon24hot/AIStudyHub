@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import java.time.LocalDateTime;
 import java.io.Serializable;
+
+import com.xuan.enums.BanksStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -41,7 +43,7 @@ public class QuestionBanks implements Serializable {
     private String description;
 
     @Schema(description = "状态（0未分享 1审核中 2被拒绝 3已公开）")
-    private Integer status;
+    private BanksStatus status;
 
     @Schema(description = "题库的创建时间")
     private LocalDateTime createTime;
