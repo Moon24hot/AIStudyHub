@@ -1,0 +1,63 @@
+xuan:
+  aicore:
+    key: ${OPEN_AI_KEY}
+    url: ${OPEN_AI_URL}
+  database:
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+
+spring:
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/springboot_db?serverTimezone=UTC&rewriteBatchedStatements=true
+      username: ${xuan.database.username}
+      password: ${xuan.database.password}
+  ai:
+    openai:
+      api-key: ${xuan.aicore.key}
+      base-url: ${xuan.aicore.url}
+  devtools:
+    restart:
+#      设置不参与热部署的文件或文件夹
+      additional-exclude: static/**,public/**
+
+mybatis-plus:
+  type-aliases-package: com.xuan.pojo.entity
+  global-config:
+    db-config:
+      id-type: auto
+  configuration:
+#    设置编码
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    #设置枚举转换
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
+
+# springdoc-openapi项目配置
+springdoc:
+  group-configs:
+    - group: '管理员相关接口'
+      paths-to-match: '/**'
+      packages-to-scan: com.xuan.controller.admin
+    - group: '用户相关接口'
+      paths-to-match: '/**'
+      packages-to-scan: com.xuan.controller.user
+    - group: '测试相关接口'
+      paths-to-match: '/**'
+      packages-to-scan: com.xuan.controller.test
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+  openapi:
+    title: "AI智能刷题平台接口文档"
+    description: "AI智能刷题平台接口文档"
+
+logging:
+  level:
+    com:
+      sky:
+        mapper: debug
+        service: info
+        controller: info
