@@ -10,7 +10,7 @@ spring:
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://localhost:3306/springboot_db?serverTimezone=UTC&rewriteBatchedStatements=true
+      url: jdbc:mysql://localhost:3306/ai_exam_platform?serverTimezone=UTC&rewriteBatchedStatements=true
       username: ${xuan.database.username}
       password: ${xuan.database.password}
   ai:
@@ -23,7 +23,7 @@ spring:
       additional-exclude: static/**,public/**
 
 mybatis-plus:
-  type-aliases-package: com.xuan.pojo.entity
+  type-aliases-package: com.xuan.domain.entity
   global-config:
     db-config:
       id-type: auto
@@ -42,9 +42,6 @@ springdoc:
     - group: '用户相关接口'
       paths-to-match: '/**'
       packages-to-scan: com.xuan.controller.user
-    - group: '测试相关接口'
-      paths-to-match: '/**'
-      packages-to-scan: com.xuan.controller.test
 
 knife4j:
   enable: true

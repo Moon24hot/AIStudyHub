@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xuan.mapper.QuestionTagsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.xuan.domain.entity.QuestionTags">
+        <id column="id" property="id" />
+        <result column="tag_name" property="tagName" />
+        <result column="question_id" property="questionId" />
+    </resultMap>
+
+</mapper>
