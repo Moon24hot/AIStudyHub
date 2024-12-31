@@ -1,10 +1,13 @@
 package com.xuan.controller.user;
 
+import com.xuan.domain.dto.QuestionAddDTO;
 import com.xuan.domain.entity.Questions;
+import com.xuan.result.Result;
 import com.xuan.service.IQuestionsService;
+import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,13 +21,24 @@ public class QuestionController {
     @Autowired
     IQuestionsService questionsService;
 
+//    /**
+//     * 查询所有题目
+//     * @return
+//     */
+//    @GetMapping("/list")
+//    public List<Questions> list() {
+//        return questionsService.list();
+//    }
+
     /**
-     * 查询所有题目
+     * 新增题目
+     * @param questionAddDTO
      * @return
      */
-    @GetMapping("/list")
-    public List<Questions> list() {
-        return questionsService.list();
+    @PostMapping("/add")
+    @Operation(summary = "新增题目")
+    public Result<String> addQuestion(@RequestBody QuestionAddDTO questionAddDTO) {
+        return questionsService.addQuestion(questionAddDTO);
     }
 
 }
