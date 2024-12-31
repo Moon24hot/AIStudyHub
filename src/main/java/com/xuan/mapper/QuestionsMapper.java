@@ -1,8 +1,12 @@
 package com.xuan.mapper;
 
+import com.xuan.domain.vo.QuestionVO;
 import org.apache.ibatis.annotations.Mapper;
 import com.xuan.domain.entity.Questions;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * <p>
