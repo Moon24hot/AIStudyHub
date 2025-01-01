@@ -48,7 +48,7 @@ public class ReviewsServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> impl
     private AnswersMapper answersMapper;
 
     /**
-     * 获取待审核题库列表 (修正版)
+     * 获取待审核题库列表
      * @param adminId
      * @return
      */

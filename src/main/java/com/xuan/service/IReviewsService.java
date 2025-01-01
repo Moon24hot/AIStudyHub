@@ -25,5 +25,11 @@ public interface IReviewsService extends IService<Reviews> {
      */
     Result<List<BankReviewVO>> getPendingBanks(Integer adminId);
 
+    /**
+     * 审核题库
+     * @param adminId 管理员ID
+     * @param bankReviewDTO 审核信息
+     * @return
+     */
     Result<String> reviewBank(Integer adminId, BankReviewDTO bankReviewDTO);
 }
