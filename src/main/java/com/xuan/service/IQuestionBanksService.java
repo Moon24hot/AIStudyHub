@@ -60,4 +60,13 @@ public interface IQuestionBanksService extends IService<QuestionBanks> {
      * @return 结果
      */
     Result<String> applyPublic(Integer userId, Integer bankId);
+
+    /**
+     * 根据题库ID查询题库所有题目ID
+     *
+     * @param bankId 题库ID
+     * @param userId 用户ID
+     * @return 题目ID列表
+     */
+    Result<List<Integer>> getQuestionIdsByBankId(Integer bankId, Integer userId);
 }

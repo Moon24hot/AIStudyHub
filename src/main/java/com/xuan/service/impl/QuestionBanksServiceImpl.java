@@ -368,4 +368,49 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
 
         return Result.success("题库申请公开成功");
     }
+
+    /**
+     * 根据题库ID查询题库所有题目ID
+     *
+     * @param bankId 题库ID
+     * @param userId 用户ID
+     * @return 题目ID列表
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result<List<Integer>> getQuestionIdsByBankId(Integer bankId, Integer userId) {
+        // 1. 检查参数
+        if (bankId == null) {
+            return Result.error("题库ID不能为空");
+        }
+        if (userId == null) {
+            return Result.error("用户ID不能为空");
+        }
+
+        // 2. 检查用户是否存在
+        Users user = usersMapper.selectById(userId);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+
+        // 3. 检查题库是否存在以及是否属于该用户
+        QuestionBanks questionBank = this.getById(bankId);
+        if (questionBank == null) {
+            return Result.error("题库不存在");
+        }
+        if (!questionBank.getCreatorId().equals(userId)) {
+            return Result.error("无权访问该题库");
+        }
+
+        // 4. 查询题库中的题目ID
+        List<QuestionBankItems> items = Db.lambdaQuery(QuestionBankItems.class)
+                .eq(QuestionBankItems::getBankId, bankId)
+                .list();
+
+        List<Integer> questionIds = items.stream()
+                .map(QuestionBankItems::getQuestionId)
+                .collect(Collectors.toList());
+
+        return Result.success(questionIds);
+    }
 }

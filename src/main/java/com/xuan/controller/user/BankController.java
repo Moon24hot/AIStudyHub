@@ -92,4 +92,18 @@ public class BankController {
             @Parameter(description = "题库ID", required = true) @RequestParam Integer bankId) {
         return questionBanksService.applyPublic(userId, bankId);
     }
+
+    /**
+     * 根据题库ID查询题库所有题目ID
+     * @param bankId
+     * @param userId
+     * @return
+     */
+    @GetMapping("/questionIds")
+    @Operation(summary = "根据题库ID查询题库所有题目ID")
+    public Result<List<Integer>> getQuestionIdsByBankId(
+            @Parameter(description = "题库ID", required = true) @RequestParam Integer bankId,
+            @Parameter(description = "用户ID", required = true) @RequestParam Integer userId) {
+        return questionBanksService.getQuestionIdsByBankId(bankId, userId);
+    }
 }
