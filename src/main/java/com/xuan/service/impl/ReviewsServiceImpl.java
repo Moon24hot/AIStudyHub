@@ -33,6 +33,9 @@ import java.util.stream.Collectors;
 public class ReviewsServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> implements IReviewsService {
 
     @Autowired
+    private ReviewsMapper reviewsMapper;
+
+    @Autowired
     private QuestionBanksMapper questionBanksMapper;
 
     @Autowired
@@ -45,31 +48,45 @@ public class ReviewsServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> impl
     private AnswersMapper answersMapper;
 
     /**
-     * 获取审核中题库列表
+     * 获取待审核题库列表 (修正版)
      * @param adminId
      * @return
      */
     @Override
-    @Transactional
     public Result<List<BankReviewVO>> getPendingBanks(Integer adminId) {
-        // 1. 查询所有状态为“审核中”的题库
-        List<QuestionBanks> pendingBanks = questionBanksMapper.selectList(
-                new LambdaQueryWrapper<QuestionBanks>()
-                        .eq(QuestionBanks::getStatus, BanksStatus.PENDING));
+        // 1. 查询 reviews 表中所有待审核的题库ID
+        List<Reviews> pendingReviews = reviewsMapper.selectList(null); // 查询所有审核记录
 
-        if (CollectionUtils.isEmpty(pendingBanks)) {
-            return Result.success(new ArrayList<>()); // 没有审核中题库，返回空列表
+        if (CollectionUtils.isEmpty(pendingReviews)) {
+            return Result.success(new ArrayList<>()); // 没有待审核题库，返回空列表
         }
 
-        // 2. 构造 BankReviewVO 列表
-        List<BankReviewVO> bankReviewVOList = pendingBanks.stream().map(bank -> {
+        // 2. 提取待审核的题库ID列表
+        List<Integer> pendingBankIds = pendingReviews.stream()
+                .map(Reviews::getItemId)
+                .collect(Collectors.toList());
+
+        // 3. 根据题库ID列表查询题库信息
+        List<QuestionBanks> pendingBanks = questionBanksMapper.selectBatchIds(pendingBankIds);
+
+        // 4. 过滤掉已经被删除或状态不是“审核中”的题库
+        List<QuestionBanks> validPendingBanks = pendingBanks.stream()
+                .filter(bank -> bank.getStatus() == BanksStatus.PENDING)
+                .collect(Collectors.toList());
+
+        if (validPendingBanks.isEmpty()){
+            return Result.success(new ArrayList<>());
+        }
+
+        // 5. 构造 BankReviewVO 列表
+        List<BankReviewVO> bankReviewVOList = validPendingBanks.stream().map(bank -> {
             BankReviewVO bankReviewVO = new BankReviewVO();
             bankReviewVO.setBankId(bank.getId());
             bankReviewVO.setTitle(bank.getTitle());
             bankReviewVO.setDescription(bank.getDescription());
             bankReviewVO.setStatus(bank.getStatus());
 
-            // 3. 获取题库中的题目ID列表
+            // 6. 获取题库中的题目ID列表
             List<QuestionBankItems> bankItems = questionBankItemsMapper.selectList(
                     new LambdaQueryWrapper<QuestionBankItems>()
                             .eq(QuestionBankItems::getBankId, bank.getId()));
@@ -77,11 +94,11 @@ public class ReviewsServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> impl
                     .map(QuestionBankItems::getQuestionId)
                     .collect(Collectors.toList());
 
-            // 4. 查询题目详情
+            // 7. 查询题目详情
             if (!CollectionUtils.isEmpty(questionIds)) {
                 List<Questions> questions = questionsMapper.selectBatchIds(questionIds);
 
-                // 5. 过滤选择题和主观题
+                // 8. 过滤选择题和主观题
                 List<QuestionVO> choiceQuestions = new ArrayList<>();
                 List<QuestionVO> subjectiveQuestions = new ArrayList<>();
 
@@ -140,20 +157,33 @@ public class ReviewsServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> impl
             return Result.error("审核结果不能为空");
         }
 
-        // 2. 检查题库是否存在以及是否处于待审核状态
+        // 2. 检查题库是否存在
         QuestionBanks bank = questionBanksMapper.selectById(bankReviewDTO.getBankId());
         if (bank == null) {
             return Result.error("题库不存在");
         }
+
+        // 3. 检查题库是否处于待审核状态
         if (bank.getStatus() != BanksStatus.PENDING) {
             return Result.error("题库状态不是待审核");
         }
 
-        // 3. 更新题库状态
+        // 4. 检查题库是否在审核记录表中
+        LambdaQueryWrapper<Reviews> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Reviews::getItemId, bankReviewDTO.getBankId());
+        Reviews review = reviewsMapper.selectOne(wrapper);
+        if (review == null) {
+            return Result.error("该题库不在审核表中");
+        }
+
+        // 5. 更新题库状态
         LambdaUpdateWrapper<QuestionBanks> updateWrapper = new LambdaUpdateWrapper<QuestionBanks>()
                 .eq(QuestionBanks::getId, bankReviewDTO.getBankId())
                 .set(QuestionBanks::getStatus, bankReviewDTO.getApproved() ? BanksStatus.PUBLIC : BanksStatus.REJECTED);
         questionBanksMapper.update(null, updateWrapper);
+
+        // 6. 从审核表中删除该题库的审核记录
+        reviewsMapper.delete(new LambdaQueryWrapper<Reviews>().eq(Reviews::getItemId, bankReviewDTO.getBankId()));
 
         return Result.success("题库审核完成");
     }
