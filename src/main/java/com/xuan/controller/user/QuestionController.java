@@ -43,6 +43,11 @@ public class QuestionController {
         return questionsService.addQuestion(questionAddDTO);
     }
 
+    /**
+     * 根据用户ID查询题目列表
+     * @param userId
+     * @return
+     */
     @GetMapping("/list")
     @Operation(summary = "根据用户ID查询题目列表")
     public Result<List<QuestionVO>> getQuestionsByUserId(

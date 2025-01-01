@@ -4,6 +4,8 @@ import org.apache.ibatis.annotations.Mapper;
 import com.xuan.domain.entity.QuestionBankItems;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
+import java.util.List;
+
 /**
  * <p>
  *  Mapper 接口

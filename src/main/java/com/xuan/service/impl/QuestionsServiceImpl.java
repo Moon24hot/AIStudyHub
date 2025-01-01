@@ -71,6 +71,8 @@ public class QuestionsServiceImpl extends ServiceImpl<QuestionsMapper, Questions
      */
     @Transactional
     public Result<String> addQuestion(QuestionAddDTO questionAddDTO) {
+        //todo: 建议检测一下用户id不存在的情况
+
         // 1. 健壮性检查
         if (!"单选题".equals(questionAddDTO.getType()) && !"多选题".equals(questionAddDTO.getType()) && !"主观题".equals(questionAddDTO.getType())) {
             return Result.error("题目类型错误");
