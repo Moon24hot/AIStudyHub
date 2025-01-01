@@ -1,9 +1,9 @@
 package com.xuan.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xuan.domain.entity.QuestionBanks;
 import com.xuan.mapper.QuestionBanksMapper;
 import com.xuan.service.IQuestionBanksService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**
