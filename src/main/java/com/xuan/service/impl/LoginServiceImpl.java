@@ -40,14 +40,14 @@ public class LoginServiceImpl implements ILoginService {
         if (StringUtils.isEmpty(loginDTO.getPassword())) {
             return Result.error("密码不能为空");
         }
-        if (StringUtils.isEmpty(loginDTO.getRoleType())) {
+        if (StringUtils.isEmpty(loginDTO.getRole())) {
             return Result.error("角色类型不能为空");
         }
 
         // 2. 根据角色类型查询相应的表
         String userId = null;
         String username = loginDTO.getUsername();
-        if ("user".equals(loginDTO.getRoleType())) {
+        if ("user".equals(loginDTO.getRole())) {
             Users user = usersMapper.selectOne(
                     new LambdaQueryWrapper<Users>()
                             .eq(Users::getUsername, username)
@@ -59,7 +59,7 @@ public class LoginServiceImpl implements ILoginService {
                 return Result.error("密码错误");
             }
             userId = String.valueOf(user.getId());
-        } else if ("admin".equals(loginDTO.getRoleType())) {
+        } else if ("admin".equals(loginDTO.getRole())) {
             Admins admin = adminsMapper.selectOne(
                     new LambdaQueryWrapper<Admins>()
                             .eq(Admins::getUsername, username)

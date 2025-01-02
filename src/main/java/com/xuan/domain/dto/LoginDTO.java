@@ -14,5 +14,5 @@ public class LoginDTO {
     private String password;
 
     @Schema(description = "角色类型（user/admin）", required = true)
-    private String roleType;
+    private String role;
 }
