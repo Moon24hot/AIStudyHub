@@ -161,6 +161,8 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<String> updateQuestionBank(QuestionBankUpdateDTO questionBankUpdateDTO) {
+        //todo 最好校验一下题目是不是都是该用户创建的或者是收藏题库带来的
+
         // 1. 检查参数
         if (questionBankUpdateDTO.getUserId() == null) {
             return Result.error("用户ID不能为空");
