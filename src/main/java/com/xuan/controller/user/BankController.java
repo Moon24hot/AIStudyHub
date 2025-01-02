@@ -1,8 +1,9 @@
 package com.xuan.controller.user;
 
+import com.xuan.domain.dto.GenerateBankDTO;
 import com.xuan.domain.dto.QuestionBankCreateDTO;
 import com.xuan.domain.dto.QuestionBankUpdateDTO;
-import com.xuan.domain.entity.QuestionBanks;
+import com.xuan.domain.vo.GeneratedQuestionBankVO;
 import com.xuan.domain.vo.CollectedBankVO;
 import com.xuan.domain.vo.QuestionBankDetailVO;
 import com.xuan.domain.vo.QuestionBankVO;
@@ -149,5 +150,15 @@ public class BankController {
             @Parameter(description = "用户ID", required = true) @RequestParam Integer userId,
             @Parameter(description = "题库ID", required = true) @RequestParam Integer bankId) {
         return questionBanksService.uncollectBank(userId, bankId);
+    }
+
+    @PostMapping("/AIGenerate")
+    @Operation(summary = "AI生成题库")
+    public Result<GeneratedQuestionBankVO> generateQuestionBank(@RequestBody GenerateBankDTO generateBankDTO) {
+        if (generateBankDTO.getUserId() == null)
+            return Result.error("用户ID不能为空");
+        if (generateBankDTO.getRequirement() == null)
+            return Result.error("题库生成需求不能为空");
+        return questionBanksService.generateQuestionBank(generateBankDTO);
     }
 }

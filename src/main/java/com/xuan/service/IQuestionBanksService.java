@@ -1,10 +1,12 @@
 package com.xuan.service;
 
+import com.xuan.domain.dto.GenerateBankDTO;
 import com.xuan.domain.dto.QuestionBankCreateDTO;
 import com.xuan.domain.dto.QuestionBankUpdateDTO;
 import com.xuan.domain.entity.QuestionBanks;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.xuan.domain.vo.CollectedBankVO;
+import com.xuan.domain.vo.GeneratedQuestionBankVO;
 import com.xuan.domain.vo.QuestionBankVO;
 import com.xuan.result.Result;
 
@@ -87,4 +89,11 @@ public interface IQuestionBanksService extends IService<QuestionBanks> {
      * @return 结果
      */
     Result<String> uncollectBank(Integer userId, Integer bankId);
+
+    /**
+     * AI 生成题库
+     * @param generateBankDTO 题库生成 DTO
+     * @return 生成的题库
+     */
+    Result<GeneratedQuestionBankVO> generateQuestionBank(GenerateBankDTO generateBankDTO);
 }

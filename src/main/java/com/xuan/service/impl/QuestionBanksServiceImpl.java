@@ -3,17 +3,24 @@ package com.xuan.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xuan.domain.dto.GenerateBankDTO;
 import com.xuan.domain.dto.QuestionBankCreateDTO;
 import com.xuan.domain.dto.QuestionBankUpdateDTO;
+import com.xuan.domain.dto.GenerateBankDtoRequirement;
 import com.xuan.domain.entity.*;
 import com.xuan.domain.vo.CollectedBankVO;
+import com.xuan.domain.vo.GeneratedQuestionBankVO;
 import com.xuan.domain.vo.QuestionBankVO;
+import com.xuan.domain.vo.QuestionVO;
 import com.xuan.enums.BanksStatus;
 import com.xuan.mapper.*;
 import com.xuan.result.Result;
-import com.xuan.service.IQuestionBankItemsService;
 import com.xuan.service.IQuestionBanksService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,7 +29,12 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+
 
 /**
  * <p>
@@ -52,6 +64,21 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
 
     @Autowired
     private FavoritesMapper favoritesMapper;
+
+    @Autowired
+    private QuestionTagsMapper questionTagsMapper;
+
+    @Autowired
+    private QuestionBankItemsMapper questionBankItemsMapper;
+
+    @Autowired
+    private ObjectMapper objectMapper; // 用于 JSON 处理
+
+    @Value("classpath:prompts/generateBankPrompt.st")
+    private Resource generateBankPrompt;
+
+    @Autowired
+    OpenAiChatModel chatModel;
 
 
     /**
@@ -532,5 +559,155 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
         favoritesMapper.deleteById(existingFavorite.getId());
 
         return Result.success("取消收藏成功");
+    }
+
+    @Override
+    public Result<GeneratedQuestionBankVO> generateQuestionBank(GenerateBankDTO generateBankDTO) {
+        Integer userId = generateBankDTO.getUserId();
+        String requirement = generateBankDTO.getRequirement();
+
+        // 1. 收集用户拥有的所有题目ID
+        Set<Integer> allQuestionIds = new HashSet<>();
+
+        // 1.1 查询用户创建的题目ID
+        List<Questions> createdQuestions = questionsMapper.selectList(
+                new LambdaQueryWrapper<Questions>().eq(Questions::getCreatorId, userId));
+        allQuestionIds.addAll(createdQuestions.stream().map(Questions::getId).collect(Collectors.toSet()));
+
+        // 1.2 查询用户收藏的题目ID
+        List<Favorites> favoriteQuestions = favoritesMapper.selectList(
+                new LambdaQueryWrapper<Favorites>()
+                        .eq(Favorites::getUserId, userId)
+                        .eq(Favorites::getType, "题目"));
+        allQuestionIds.addAll(favoriteQuestions.stream().map(Favorites::getItemId).collect(Collectors.toSet()));
+
+        // 1.3 查询用户收藏的题库中的题目ID
+        List<Favorites> favoriteBanks = favoritesMapper.selectList(
+                new LambdaQueryWrapper<Favorites>()
+                        .eq(Favorites::getUserId, userId)
+                        .eq(Favorites::getType, "题库"));
+        List<Integer> bankIds = favoriteBanks.stream().map(Favorites::getItemId).collect(Collectors.toList());
+
+        if (!CollectionUtils.isEmpty(bankIds)) {
+            List<QuestionBankItems> bankItems = questionBankItemsMapper.selectList(
+                    new LambdaQueryWrapper<QuestionBankItems>()
+                            .in(QuestionBankItems::getBankId, bankIds));
+            allQuestionIds.addAll(bankItems.stream().map(QuestionBankItems::getQuestionId).collect(Collectors.toSet()));
+        }
+
+        // 2. 如果用户没有任何题目，返回错误信息
+        if (allQuestionIds.isEmpty()) {
+            return Result.error("您没有任何题目，无法生成题库");
+        }
+
+        // 3. 获取这些题目拥有的题目标签以及题目标签对应题目数量
+        List<QuestionTags> questionTags = questionTagsMapper.selectList(
+                new LambdaQueryWrapper<QuestionTags>()
+                        .in(QuestionTags::getQuestionId, allQuestionIds));
+
+        Map<String, Integer> tagCountMap = new HashMap<>();
+        for (QuestionTags questionTag : questionTags) {
+            String tagName = questionTag.getTagName();
+            tagCountMap.put(tagName, tagCountMap.getOrDefault(tagName, 0) + 1);
+        }
+
+        // 4. 将题目标签和对应题目数量转换为 List<Map<String, Object>> 格式
+        List<Map<String, Object>> tagList = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : tagCountMap.entrySet()) {
+            Map<String, Object> tagMap = new HashMap<>();
+            tagMap.put("tag", entry.getKey());
+            tagMap.put("count", entry.getValue());
+            tagList.add(tagMap);
+        }
+
+        // 5. 构建 prompt 并调用 AI 大模型
+        String tagListJson;
+        try {
+            tagListJson = objectMapper.writeValueAsString(tagList);
+        } catch (IOException e) {
+            return Result.error("标签列表转换为 JSON 失败");
+        }
+
+        // 读取 prompt 模板
+        String promptTemplate;
+        try {
+            promptTemplate = new String(generateBankPrompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return Result.error("读取 prompt 模板失败");
+        }
+
+        // 替换模板中的变量
+        String prompt = promptTemplate
+            .replace("{user_requirement}", requirement)
+            .replace("{tags}", tagListJson);
+
+
+        String aiResponse = chatModel.call(prompt);
+
+        System.out.println("aiResponse = " + aiResponse);
+
+//        // 6. 调用 AI 大模型并获取响应
+//        Message userMessage = new Message(MessageType.USER, prompt);
+//        ChatResponse response = chatClient.call(new Prompt(List.of(userMessage)));
+//        String aiResponse = response.getResult().getOutput().getContent();
+
+        // 7. 解析 AI 大模型的响应
+        GenerateBankDtoRequirement generatedRequirements;
+        try {
+            generatedRequirements = objectMapper.readValue(aiResponse, GenerateBankDtoRequirement.class);
+        } catch (IOException e) {
+            return Result.error("AI 大模型响应解析失败");
+        }
+
+        // 8. 根据 AI 大模型的响应构建题库
+        GeneratedQuestionBankVO generatedBank = new GeneratedQuestionBankVO();
+        generatedBank.setTitle(generatedRequirements.getTitle());
+        generatedBank.setDescription(generatedRequirements.getDescription());
+
+        // 9. 如果无法生成题库，直接返回
+        if ("无法生成题库".equals(generatedBank.getTitle())) {
+            return Result.success(generatedBank);
+        }
+
+        // 10. 根据正面需求选择题目
+        List<QuestionVO> selectedQuestions = new ArrayList<>();
+        for (GenerateBankDtoRequirement.TagCount positiveRequirement : generatedRequirements.getPositive_requirements()) {
+            String requiredTag = positiveRequirement.getTag();
+            int requiredCount = Integer.parseInt(positiveRequirement.getCount());
+
+            // 获取拥有该标签的题目ID列表
+            List<QuestionTags> tagQuestions = questionTagsMapper.selectList(
+                    new LambdaQueryWrapper<QuestionTags>()
+                            .eq(QuestionTags::getTagName, requiredTag)
+                            .in(QuestionTags::getQuestionId, allQuestionIds));
+            List<Integer> tagQuestionIds = tagQuestions.stream()
+                    .map(QuestionTags::getQuestionId)
+                    .collect(Collectors.toList());
+
+            // 从这些题目中随机选择所需数量的题目
+            Collections.shuffle(tagQuestionIds);
+            List<Integer> selectedQuestionIds = tagQuestionIds.stream()
+                    .limit(requiredCount)
+                    .collect(Collectors.toList());
+
+            // 查询题目详情
+            if (!selectedQuestionIds.isEmpty()){
+                List<Questions> questions = questionsMapper.selectBatchIds(selectedQuestionIds);
+                // 转换为 QuestionVO
+                List<QuestionVO> questionVOs = questions.stream().map(question -> {
+                    QuestionVO questionVO = new QuestionVO();
+                    questionVO.setQuestionId(question.getId());
+                    questionVO.setContent(question.getContent());
+                    questionVO.setType(question.getType());
+                    return questionVO;
+                }).collect(Collectors.toList());
+
+                selectedQuestions.addAll(questionVOs);
+            }
+        }
+
+        generatedBank.setQuestions(selectedQuestions);
+
+        return Result.success(generatedBank);
     }
 }
