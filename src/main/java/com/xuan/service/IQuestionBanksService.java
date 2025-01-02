@@ -4,6 +4,7 @@ import com.xuan.domain.dto.QuestionBankCreateDTO;
 import com.xuan.domain.dto.QuestionBankUpdateDTO;
 import com.xuan.domain.entity.QuestionBanks;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.xuan.domain.vo.CollectedBankVO;
 import com.xuan.domain.vo.QuestionBankVO;
 import com.xuan.result.Result;
 
@@ -69,4 +70,21 @@ public interface IQuestionBanksService extends IService<QuestionBanks> {
      * @return 题目ID列表
      */
     Result<List<Integer>> getQuestionIdsByBankId(Integer bankId, Integer userId);
+
+    /**
+     * 查看收藏题库列表
+     *
+     * @param userId 用户ID
+     * @return 收藏题库列表
+     */
+    Result<List<CollectedBankVO>> listCollectedBanks(Integer userId);
+
+    /**
+     * 取消收藏题库
+     *
+     * @param userId 用户ID
+     * @param bankId 题库ID
+     * @return 结果
+     */
+    Result<String> uncollectBank(Integer userId, Integer bankId);
 }
