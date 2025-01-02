@@ -53,6 +53,7 @@ public class PracticeServiceImpl extends ServiceImpl<QuestionBanksMapper, Questi
      * @return 题库详情
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result<QuestionBankDetailVO> getQuestionBankDetail(Integer bankId) {
         // 1. 检查参数
         if (bankId == null) {
