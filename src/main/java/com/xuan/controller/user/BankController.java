@@ -152,6 +152,11 @@ public class BankController {
         return questionBanksService.uncollectBank(userId, bankId);
     }
 
+    /**
+     * AI生成题库
+     * @param generateBankDTO
+     * @return
+     */
     @PostMapping("/AIGenerate")
     @Operation(summary = "AI生成题库")
     public Result<GeneratedQuestionBankVO> generateQuestionBank(@RequestBody GenerateBankDTO generateBankDTO) {

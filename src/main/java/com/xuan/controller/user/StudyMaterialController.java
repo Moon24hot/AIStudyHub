@@ -69,4 +69,13 @@ public class StudyMaterialController {
         return informationService.deleteStudyMaterial(userId, materialId);
     }
 
+    @GetMapping("/summarize")
+    @Operation(summary = "AI总结学习资料")
+    public Result<String> summarizeStudyMaterial(
+            @Parameter(description = "学习资料ID", required = true) @RequestParam Integer materialId) {
+        if (materialId == null) {
+            return Result.error("学习资料ID不能为空");
+        }
+        return informationService.summarizeStudyMaterial(materialId);
+    }
 }

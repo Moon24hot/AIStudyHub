@@ -12,11 +12,16 @@ import com.xuan.mapper.UsersMapper;
 import com.xuan.result.Result;
 import com.xuan.service.IInformationService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +41,12 @@ public class InformationServiceImpl extends ServiceImpl<InformationMapper, Infor
 
     @Autowired
     private UsersMapper usersMapper;
+
+    @Value("classpath:prompts/summarize.txt")
+    private Resource summarizePrompt;
+
+    @Autowired
+    private OpenAiChatModel chatModel;
 
     @Override
     public Result<List<StudyMaterialVO>> getStudyMaterialsByUserId(Integer userId) {
@@ -140,6 +151,36 @@ public class InformationServiceImpl extends ServiceImpl<InformationMapper, Infor
         informationMapper.deleteById(materialId);
 
         return Result.success("学习资料删除成功");
+    }
+
+    @Override
+    public Result<String> summarizeStudyMaterial(Integer materialId) {
+        // 1. 检查学习资料是否存在
+        Information information = informationMapper.selectById(materialId);
+        if (information == null) {
+            return Result.error("学习资料不存在");
+        }
+
+        // 2. 读取 prompt 模板
+        String promptTemplate;
+        System.out.println("summarizePrompt = " + summarizePrompt);
+        try {
+            promptTemplate = new String(summarizePrompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return Result.error("读取 prompt 模板失败");
+        }
+
+
+        // 3. 替换模板中的变量
+        String prompt = promptTemplate
+                .replace("{title}", information.getTitle())
+                .replace("{content}", information.getContent());
+
+        // 4. 调用 AI 大模型并获取响应
+        String aiResponse = chatModel.call(prompt);
+
+        // 5. 返回总结内容
+        return Result.success(aiResponse);
     }
 
 }

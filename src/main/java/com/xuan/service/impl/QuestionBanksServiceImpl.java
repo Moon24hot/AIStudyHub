@@ -78,7 +78,7 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
     private Resource generateBankPrompt;
 
     @Autowired
-    OpenAiChatModel chatModel;
+    private OpenAiChatModel chatModel;
 
 
     /**
@@ -620,7 +620,7 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
             tagList.add(tagMap);
         }
 
-        // 5. 构建 prompt 并调用 AI 大模型
+        // 5. 构建 prompt
         String tagListJson;
         try {
             tagListJson = objectMapper.writeValueAsString(tagList);
@@ -642,21 +642,20 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
             .replace("{tags}", tagListJson);
 
 
+        // 6. 调用 AI 大模型并获取响应
         String aiResponse = chatModel.call(prompt);
 
-        System.out.println("aiResponse = " + aiResponse);
-
-//        // 6. 调用 AI 大模型并获取响应
-//        Message userMessage = new Message(MessageType.USER, prompt);
-//        ChatResponse response = chatClient.call(new Prompt(List.of(userMessage)));
-//        String aiResponse = response.getResult().getOutput().getContent();
+        // 去除 aiResponse 字符串开头和结尾的 ```json 和 ```
+        if (aiResponse.startsWith("```json")) {
+            aiResponse = aiResponse.substring(7, aiResponse.length() - 3);
+        }
 
         // 7. 解析 AI 大模型的响应
         GenerateBankDtoRequirement generatedRequirements;
         try {
             generatedRequirements = objectMapper.readValue(aiResponse, GenerateBankDtoRequirement.class);
         } catch (IOException e) {
-            return Result.error("AI 大模型响应解析失败");
+            return Result.error("AI 大模型响应解析失败" + e);
         }
 
         // 8. 根据 AI 大模型的响应构建题库

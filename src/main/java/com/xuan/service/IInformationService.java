@@ -54,4 +54,11 @@ public interface IInformationService extends IService<Information> {
      * @return 结果
      */
     Result<String> deleteStudyMaterial(Integer userId, Integer materialId);
+
+    /**
+     * AI总结学习资料
+     * @param materialId 学习资料ID
+     * @return 总结内容
+     */
+    Result<String> summarizeStudyMaterial(Integer materialId);
 }
