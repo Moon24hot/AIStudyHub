@@ -19,7 +19,7 @@ spring:
       base-url: ${xuan.aicore.url}
   devtools:
     restart:
-#      设置不参与热部署的文件或文件夹
+      #      设置不参与热部署的文件或文件夹
       additional-exclude: static/**,public/**
 
 mybatis-plus:
@@ -28,7 +28,7 @@ mybatis-plus:
     db-config:
       id-type: auto
   configuration:
-#    设置编码
+    #    设置编码
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     #设置枚举转换
     default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
@@ -42,6 +42,9 @@ springdoc:
     - group: '用户相关接口'
       paths-to-match: '/**'
       packages-to-scan: com.xuan.controller.user
+    - group: '登录注册相关接口'
+      paths-to-match: '/**'
+      packages-to-scan: com.xuan.controller.login
 
 knife4j:
   enable: true
