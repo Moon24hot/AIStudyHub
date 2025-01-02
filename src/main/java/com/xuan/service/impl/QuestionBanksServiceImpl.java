@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.xuan.domain.dto.QuestionBankCreateDTO;
 import com.xuan.domain.dto.QuestionBankUpdateDTO;
 import com.xuan.domain.entity.*;
+import com.xuan.domain.vo.CollectedBankVO;
 import com.xuan.domain.vo.QuestionBankVO;
 import com.xuan.enums.BanksStatus;
 import com.xuan.mapper.*;
@@ -20,10 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +49,9 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
 
     @Autowired
     private ReviewsMapper reviewsMapper;
+
+    @Autowired
+    private FavoritesMapper favoritesMapper;
 
 
     /**
@@ -155,6 +156,7 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
 
     /**
      * 编辑题库
+     *
      * @param questionBankUpdateDTO 题库更新DTO
      * @return
      */
@@ -270,6 +272,7 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
 
     /**
      * 删除题库
+     *
      * @param userId 用户ID
      * @param bankId 题库ID
      * @return
@@ -322,6 +325,7 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
 
     /**
      * 申请题库公开
+     *
      * @param userId 用户ID
      * @param bankId 题库ID
      * @return
@@ -414,5 +418,119 @@ public class QuestionBanksServiceImpl extends ServiceImpl<QuestionBanksMapper, Q
                 .collect(Collectors.toList());
 
         return Result.success(questionIds);
+    }
+
+    /**
+     * 查看收藏题库列表
+     *
+     * @param userId 用户ID
+     * @return 收藏题库列表
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result<List<CollectedBankVO>> listCollectedBanks(Integer userId) {
+        // 1. 检查参数
+        if (userId == null) {
+            return Result.error("用户ID不能为空");
+        }
+
+        // 2. 检查用户是否存在
+        Users user = usersMapper.selectById(userId);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+
+        // 3. 查询该用户收藏的题库ID列表
+        List<Favorites> favorites = favoritesMapper.selectList(
+                new LambdaQueryWrapper<Favorites>()
+                        .eq(Favorites::getUserId, userId)
+                        .eq(Favorites::getType, "题库")
+        );
+
+        //如果该用户没有任何收藏，则返回空列表
+        if (favorites.isEmpty()) {
+            return Result.success(new ArrayList<>());
+        }
+
+        List<Integer> bankIds = favorites.stream()
+                .map(Favorites::getItemId)
+                .collect(Collectors.toList());
+
+        // 4. 查询题库信息
+        List<QuestionBanks> collectedBanks = this.listByIds(bankIds);
+
+        // 5. 查询题库创建者ID列表并去重
+        List<Integer> creatorIds = collectedBanks.stream()
+                .map(QuestionBanks::getCreatorId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 6. 批量查询创建者信息
+        List<Users> creators = usersMapper.selectBatchIds(creatorIds);
+
+        // 7. 将创建者信息转换为 Map，便于后续使用
+        Map<Integer, String> creatorNameMap = creators.stream()
+                .collect(Collectors.toMap(Users::getId, Users::getUsername));
+
+        // 8. 组装 CollectedBankVO 列表
+        List<CollectedBankVO> collectedBankVOList = collectedBanks.stream()
+                .map(bank -> {
+                    CollectedBankVO vo = new CollectedBankVO();
+                    vo.setBankId(bank.getId());
+                    vo.setTitle(bank.getTitle());
+                    vo.setDescription(bank.getDescription());
+                    vo.setCreatorName(creatorNameMap.get(bank.getCreatorId()));
+                    return vo;
+                })
+                .collect(Collectors.toList());
+
+        return Result.success(collectedBankVOList);
+    }
+
+    /**
+     * 取消收藏题库
+     *
+     * @param userId 用户ID
+     * @param bankId 题库ID
+     * @return 结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result<String> uncollectBank(Integer userId, Integer bankId) {
+        // 1. 检查参数
+        if (userId == null) {
+            return Result.error("用户ID不能为空");
+        }
+        if (bankId == null) {
+            return Result.error("题库ID不能为空");
+        }
+
+        // 2. 检查用户是否存在
+        Users user = usersMapper.selectById(userId);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+
+        // 3. 检查题库是否存在
+        QuestionBanks questionBank = questionBanksMapper.selectById(bankId);
+        if (questionBank == null) {
+            return Result.error("题库不存在");
+        }
+
+        // 4. 检查是否已收藏
+        Favorites existingFavorite = favoritesMapper.selectOne(
+                new LambdaQueryWrapper<Favorites>()
+                        .eq(Favorites::getUserId, userId)
+                        .eq(Favorites::getItemId, bankId)
+                        .eq(Favorites::getType, "题库")
+        );
+        if (existingFavorite == null) {
+            return Result.error("该题库未被收藏");
+        }
+
+        // 5. 删除收藏记录
+        favoritesMapper.deleteById(existingFavorite.getId());
+
+        return Result.success("取消收藏成功");
     }
 }
