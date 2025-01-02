@@ -1,6 +1,5 @@
 package com.xuan.controller.user;
 
-import com.xuan.domain.vo.QuestionBankVO;
 import com.xuan.domain.vo.QuestionVO;
 import com.xuan.result.Result;
 import com.xuan.service.IFavoritesService;
@@ -28,23 +27,13 @@ public class UserController {
     private IWrongQuestionsService wrongQuestionsService;
 
     @GetMapping("/favorites/questions")
-    @Operation(summary = "获取用户收藏的题目列表")
+    @Operation(summary = "获取用户收藏的所有题目列表")
     public Result<List<QuestionVO>> getFavoriteQuestions(
             @Parameter(description = "用户ID", required = true) @RequestParam Integer userId) {
         if (userId == null) {
             return Result.error("用户ID不能为空");
         }
-        return favoritesService.getFavoriteQuestions(userId);
-    }
-
-    @GetMapping("/favorites/banks")
-    @Operation(summary = "获取用户收藏的题库列表")
-    public Result<List<QuestionBankVO>> getFavoriteQuestionBanks(
-            @Parameter(description = "用户ID", required = true) @RequestParam Integer userId) {
-        if (userId == null) {
-            return Result.error("用户ID不能为空");
-        }
-        return favoritesService.getFavoriteQuestionBanks(userId);
+        return favoritesService.getAllFavoriteQuestions(userId);
     }
 
     @GetMapping("/wrongQuestions")
