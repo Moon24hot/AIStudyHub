@@ -24,4 +24,12 @@ public interface IWrongQuestionsService extends IService<WrongQuestions> {
      */
     Result<List<QuestionVO>> getWrongQuestions(Integer userId);
 
+    /**
+     * 将错题移出错题集
+     * @param userId 用户ID
+     * @param questionId 题目ID
+     * @return 结果
+     */
+    Result<String> removeWrongQuestion(Integer userId, Integer questionId);
+
 }

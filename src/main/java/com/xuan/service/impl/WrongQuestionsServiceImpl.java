@@ -2,6 +2,7 @@ package com.xuan.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xuan.domain.entity.Answers;
+import com.xuan.domain.entity.Information;
 import com.xuan.domain.entity.Questions;
 import com.xuan.domain.entity.WrongQuestions;
 import com.xuan.domain.vo.AnswerVO;
@@ -20,9 +21,10 @@ import org.springframework.util.CollectionUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
 /**
  * <p>
- *  服务实现类
+ * 服务实现类
  * </p>
  *
  * @author author
@@ -71,7 +73,7 @@ public class WrongQuestionsServiceImpl extends ServiceImpl<WrongQuestionsMapper,
                             .eq(Answers::getQuestionId, question.getId()));
             List<AnswerVO> answerVOList = answers.stream().map(answer -> {
                 AnswerVO answerVO = new AnswerVO();
-                BeanUtils.copyProperties(answer,answerVO);
+                BeanUtils.copyProperties(answer, answerVO);
                 return answerVO;
             }).collect(Collectors.toList());
             questionVO.setAnswers(answerVOList);
@@ -80,6 +82,23 @@ public class WrongQuestionsServiceImpl extends ServiceImpl<WrongQuestionsMapper,
         }).collect(Collectors.toList());
 
         return Result.success(questionVOList);
+    }
+
+    @Override
+    public Result<String> removeWrongQuestion(Integer userId, Integer questionId) {
+        // 1. 检查错题记录是否存在
+        LambdaQueryWrapper<WrongQuestions> queryWrapper = new LambdaQueryWrapper<WrongQuestions>()
+                .eq(WrongQuestions::getUserId, userId)
+                .eq(WrongQuestions::getQuestionId, questionId);
+        WrongQuestions wrongQuestion = wrongQuestionsMapper.selectOne(queryWrapper);
+        if (wrongQuestion == null) {
+            return Result.error("错题记录不存在");
+        }
+
+        // 2. 删除错题记录
+        wrongQuestionsMapper.delete(queryWrapper);
+
+        return Result.success("错题已移出错题集");
     }
 
 }
